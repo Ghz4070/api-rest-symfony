@@ -1,0 +1,75 @@
+version: '3.9'
+
+services:
+
+  php-fpm:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    networks:
+      - network_nginx
+    # ports:
+    #   - "9000:9000"
+    depends_on:
+      - database
+    volumes:
+      - .:/var/www/html:cached
+      - ./docker/php/php-limit.ini:/usr/local/etc/php/conf.d/php-limit.ini
+
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    networks:
+      - network_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - php-fpm
+    volumes:
+      - .:/var/www/html:cached
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/web/:/etc/nginx/sites-available
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d
+
+  database:
+    image: mariadb:10.4
+    networks:
+      - network_nginx
+    restart: on-failure
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=mariadb
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=userSecret
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - ./docker/sql/data:/var/lib/mysql
+
+  pma:
+    image: phpmyadmin:latest
+    restart: on-failure
+    environment:
+      - PMA_HOST=database
+      - PMA_USER=user
+      - PMA_PASSWORD=userSecret
+      - MYSQL_ROOT_PASSWORD=root
+      - PMA_ARBITRARY=1
+    networks:
+      - network_nginx
+    ports:
+      - "8080:80"
+
+  composer:
+    image: composer:2
+    networks:
+      - network_nginx
+    volumes:
+      - .:/app:cached
+    command: install
+
+networks:
+  network_nginx:
+    driver: bridge
