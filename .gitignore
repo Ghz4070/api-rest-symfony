@@ -8,4 +8,6 @@
 /var/
 /vendor/
 /docker/sql/data
+/.idea
+/.DS_Store
 ###< symfony/framework-bundle ###
